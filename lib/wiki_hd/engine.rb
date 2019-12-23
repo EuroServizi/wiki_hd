@@ -1,6 +1,9 @@
+require_relative '../../config/initializers/inflections' #require delle inflections per nomi plurali
+
 module WikiHd
   class Engine < ::Rails::Engine
     isolate_namespace WikiHd
+    
     require 'config' #carica gemma per i Settings da file yml
     
     #aggiunto per usare migration a livello di suite openweb
