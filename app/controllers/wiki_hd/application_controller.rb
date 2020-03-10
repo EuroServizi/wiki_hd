@@ -3,12 +3,16 @@ module WikiHd
     protect_from_forgery with: :exception
     before_action :authenticate_user!
 
+      # GET /index
+      def index
+        
+        respond_to do |format|
+          format.html
+          format.js
+        end
+      end
 
 
-
-
-
-    
       private
 
       #Metodo che fa l'autenticazione

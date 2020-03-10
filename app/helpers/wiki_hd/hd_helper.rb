@@ -1,4 +1,4 @@
 module WikiHd
-  module WikiHdHelper
+  module HdHelper
   end
 end
