@@ -3,15 +3,20 @@ require_dependency "wiki_hd/application_controller"
 module WikiHd
   class HdController < ApplicationController
       #before_action :set_user, only: [:index]
-
+      before_action :set_class_var
+      
+      @@applicazioni = nil
+      @@hash_applicazioni = {}
+      
      
       # GET /index
       def index
-        applicazioni = AuthHub::ClientiApplicazione.all
-        @applicazioni = applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.to_json unless applicazioni.blank? 
-        @@hash_applicazioni = {}
-        applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.each{|el_app| @@hash_applicazioni[el_app['value']] = el_app['label'] }
-       
+        # applicazioni = AuthHub::ClientiApplicazione.all
+        # @applicazioni = applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.to_json unless applicazioni.blank? 
+        # @@hash_applicazioni = {}
+        # applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.each{|el_app| @@hash_applicazioni[el_app['value']] = el_app['label'] }
+        @applicazioni = @@applicazioni
+    
         respond_to do |format|
           format.html
           format.js
@@ -105,6 +110,74 @@ module WikiHd
           end
       end
 
+      def view_risoluzione
+          begin
+            id_risoluzione = risoluzioni_corrente_params[:id]
+            risoluzione = Soluzione.find(id_risoluzione)
+            unless risoluzione.blank?
+              @esito = {
+                stato: 'ok',
+                problematica: risoluzione.problematica,
+                testo_soluzione: risoluzione.testo_soluzione,
+                tags: (risoluzione.tags.count > 0 ? risoluzione.tags.map{|tag| tag.nome}.join(", ") : []),
+                applicazione: (risoluzione.auth_hub_clienti_applicazione.blank? ? '' : risoluzione.auth_hub_clienti_applicazione.DESCRIZIONE )
+              }
+            else
+              @esito = {
+                stato: 'ko',
+                errore: "Risoluzione non presente con id #{id_risoluzione}"
+              }
+            end
+          rescue => exception
+            logger.error exception.message
+            logger.error exception.backtrace.join("\n")
+            @esito = {
+              stato: 'ko',
+              errore: exception.message
+            }
+          end
+          
+          respond_to do |format|
+            format.json { render json: @esito }
+          end
+      end
+
+      def tags
+          begin
+            totale_righe = Tag.count
+            lista = Tag.order(nome: :asc)
+            lista_per_tabella = (lista.blank? ? [] : lista.to_a.map{|riga| {'value' => riga[:id], 'label' => riga[:nome] } })
+            @esito = {
+              stato: 'ok',
+              totale_righe: totale_righe,
+              lista_per_tabella: lista_per_tabella,
+            }
+          rescue => exception
+            logger.error exception.message
+            logger.error exception.backtrace.join("\n")
+            @esito = {
+              stato: 'ko',
+              errore: exception.message
+            }
+          end
+          
+          respond_to do |format|
+            format.json { render json: @esito }
+          end
+      end
+
+      def set_class_var
+        if @@applicazioni.blank?
+          applicazioni ||= AuthHub::ClientiApplicazione.all
+          #var di classe per select
+          @@applicazioni = applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.to_json unless applicazioni.blank? 
+          #hash delle applicazioni, chiave = id della tabella e valore = descrizione
+          if @@hash_applicazioni.blank?  
+            applicazioni.to_a.map{|app| {'value' => app[:ID], 'label' => app[:DESCRIZIONE]} }.each{|el_app| @@hash_applicazioni[el_app['value']] = el_app['label'] } unless applicazioni.blank?
+          end
+        end
+      end
+
       private
 
       def nuova_risoluzione_param
@@ -113,6 +186,10 @@ module WikiHd
 
       def risoluzioni_params
         params.permit(:page, :sizePerPage)
+      end
+
+      def risoluzioni_corrente_params
+        params.permit(:id)
       end
 
   end

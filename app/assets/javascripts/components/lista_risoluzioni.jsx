@@ -46,6 +46,8 @@ export default class ListaRisoluzioni extends React.Component {
         console.log("completo i dati");
         return dati;
     }
+
+    
         
     async componentDidMount() {
         try
@@ -143,8 +145,8 @@ export default class ListaRisoluzioni extends React.Component {
 
         const myRowEvents = {
             onClick: (e, row, rowIndex) => {
-            console.log("clicked on row: "+row.utenza);
-            
+                console.log("Apro risoluzione: "+row.id);
+                this.props.setMain(false,true,true,row.id);
             }
         };
 
@@ -155,7 +157,7 @@ export default class ListaRisoluzioni extends React.Component {
             <h3>Lista Risoluzioni</h3>
                 <ToolkitProvider
                     keyField="id"
-                    data={this.data}
+                    data={this.state.data}
                     columns={this.colonneTab}
                     search
                 >

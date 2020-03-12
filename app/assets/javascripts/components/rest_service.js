@@ -34,13 +34,14 @@ export default class RestService {
             // do a thing, possibly async, then…
             console.log("RestService call from param");
             //converto l'hashmap in una stringa del tipo chiave=valore&chiave2=valore2
-            var full_url_api = base_url+"/"+element_type+"."+resp_format;
+            var full_url_api = base_url+"/"+element_type;
             if(id != null){
                 full_url_api += "/"+id
             }
             if(action != null){
                 full_url_api += "/"+action
             }
+            if(id == null && action == null) full_url_api += "."+resp_format ;
             if(params != null){
                 var str_params = "?"
                 for (var key_par in params)

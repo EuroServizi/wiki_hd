@@ -18,6 +18,7 @@ export default class MainContainer extends React.Component {
             lista_risoluzioni: true,
             form_risoluzioni: false,
             visibleModal: false,
+            risoluzione_attiva: null,
             applicazioni: JSON.parse($("#applicazioni").text())
         }
     }
@@ -33,21 +34,21 @@ export default class MainContainer extends React.Component {
 
     /* apre form della risoluzione: usato per nuova o modifica */
     handleNewRisoluzione(){
-        this.setState({lista_risoluzioni: false, form_risoluzioni: true, visibleModal: true });
+        this.setState({lista_risoluzioni: false, form_risoluzioni: true, visibleModal: true, risoluzione_attiva: null });
     }
 
     /* apre form della risoluzione: usato per nuova o modifica */
     handleListaRisoluzioni(){
-        this.setState({lista_risoluzioni: true, form_risoluzioni: false, visibleModal: true });
+        this.setState({lista_risoluzioni: true, form_risoluzioni: false, visibleModal: true, risoluzione_attiva: null });
     }
   
     // Funzione per comandare componente main da figli
-    setMain(lista,form,modal) {
+    setMain(lista,form,modal,id_risoluzione) {
         if(lista){
-            this.setState({lista_risoluzioni: true, form_risoluzioni: false, visibleModal: modal});
+            this.setState({lista_risoluzioni: true, form_risoluzioni: false, visibleModal: modal, risoluzione_attiva: id_risoluzione});
         }
         if(form){
-            this.setState({lista_risoluzioni: false, form_risoluzioni: true, visibleModal: modal});
+            this.setState({lista_risoluzioni: false, form_risoluzioni: true, visibleModal: modal, risoluzione_attiva: id_risoluzione});
         }
     }
 
@@ -66,7 +67,7 @@ export default class MainContainer extends React.Component {
                 return (
                     <div>
                         <LoadingModal visibleModal={this.state.visibleModal} />
-                        <Risoluzione applicazioni={this.state.applicazioni} setMain={this.setMain}/>
+                        <Risoluzione applicazioni={this.state.applicazioni} setMain={this.setMain} risoluzione_attiva={this.state.risoluzione_attiva}/>
                         <Button bsStyle="primary" onClick={this.handleListaRisoluzioni}>Indietro</Button>
                     </div>
                 );
