@@ -13,23 +13,27 @@ module WikiHd
   
   
   
-    #passo array di tags e collego a tabella tags
-    def set_tags(array_tags)
-      unless array_tags.blank?
-        array_tags.each{|tag|
-          tag = tag.strip
-          tag_pres = WikiHd::Tag.where("nome = ?", tag)
-          if tag_pres.size == 1
-            self.tags << tag_pres
-          else
-            nuovo_tag = WikiHd::Tag.new
-            nuovo_tag.nome = tag
-            nuovo_tag.save
-            self.tags << nuovo_tag
-          end
-        }
+      #passo array di tags e collego a tabella tags
+      def set_tags(array_tags)
+        unless array_tags.blank?
+          tags_da_salvare = []
+          #qui arriva un array che contiene o id di tag presenti o il nome del nuovo tag
+          array_tags.each{|tag|
+            tag = tag.strip
+            tag_pres = WikiHd::Tag.where("id = ?", tag.to_i)
+            if tag_pres.size == 1
+              tags_da_salvare << tag_pres.first
+            else
+              nuovo_tag = WikiHd::Tag.new
+              nuovo_tag.nome = tag
+              nuovo_tag.save
+              tags_da_salvare << nuovo_tag
+            end
+          }
+          
+          self.tags = tags_da_salvare
+        end
       end
-    end
   
   end
 end

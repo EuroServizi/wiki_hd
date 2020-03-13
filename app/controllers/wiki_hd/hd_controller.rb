@@ -53,7 +53,7 @@ module WikiHd
       def salva_risoluzione
         @esito = {}
         begin
-          soluzione = Soluzione.new
+          soluzione = (nuova_risoluzione_param[:id].blank? ? Soluzione.new : Soluzione.find(nuova_risoluzione_param[:id]) )
           soluzione.problematica = nuova_risoluzione_param[:problematica]
           soluzione.testo_soluzione = nuova_risoluzione_param[:testo_soluzione]
           soluzione.set_tags(nuova_risoluzione_param[:tags])
@@ -62,9 +62,9 @@ module WikiHd
           soluzione.save
           @esito['stato'] = 'ok'
           @esito['id_soluzione'] = soluzione.id
-        rescue => exception
-          logger.error exception.message
-          logger.error exception.backtrace.join("\n")
+        rescue => exc
+          logger.error exc.message
+          logger.error exc.backtrace.join("\n")
           @esito['stato'] = 'ko'
           @esito['errore'] = exc.message
         end
@@ -181,7 +181,7 @@ module WikiHd
       private
 
       def nuova_risoluzione_param
-        params.require(:hd).permit(:problematica, :testo_soluzione, :applicazione, :tags => [])
+        params.require(:hd).permit(:problematica, :testo_soluzione, :applicazione, :id, :tags => [])
       end
 
       def risoluzioni_params

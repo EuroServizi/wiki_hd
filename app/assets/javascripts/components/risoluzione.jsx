@@ -20,7 +20,8 @@ export default class Risoluzione extends React.Component {
         // }
         this.RestService = new RestService();
         this.state = {
-            selectedOption: null,
+            selectedOptionAppl: null,
+            selectedOptionTags: null,
             tags: [],
             numeroTags: 0,
             valoriCorrenti: {
@@ -30,31 +31,33 @@ export default class Risoluzione extends React.Component {
                 applicazione: null
             },
             //valoriCorrenti: {},
-            action: null,
+            action: 'new',
             errori: []
         }
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleChange = this.handleChange.bind(this);
         this.handleChangeMulti = this.handleChangeMulti.bind(this);
         this.changeVal = this.changeVal.bind(this);
+        this.abilitaModifica = this.abilitaModifica.bind(this);
         
     }
 
     /* Per react select con creazione di nuovi valori vedi */
     /* https://react-select.com/creatable */
 
-    handleChange = selected_option => {
-        this.setState({ selectedOption: selected_option });
-        console.log("setto valore con handleChange: "+selected_option.label);
+    handleChange = selected_app => {
+        this.setState({ selectedOptionAppl: selected_app });
+        console.log("setto valore con handleChange: "+selected_app.label);
     };
 
 
     handleChangeMulti = (newValue: any, actionMeta: any) => {
         console.log("setto valore con handleChangeMulti: "+newValue);
-        console.group('Value Changed');
-        console.log(newValue);
-        console.log(`action: ${actionMeta.action}`);
-        console.groupEnd();
+        this.setState({ selectedOptionTags: newValue });
+        // console.group('Value Changed');
+        // console.log(newValue);
+        // console.log(`action: ${actionMeta.action}`);
+        // console.groupEnd();
       };
 
     handleSubmit(event) {
@@ -94,7 +97,8 @@ export default class Risoluzione extends React.Component {
                 'problematica': event.target.problematica.value,
                 'testo_soluzione': event.target.testo_soluzione.value,
                 'tags': tags,
-                'applicazione': event.target.applicazione.value
+                'applicazione': event.target.applicazione.value,
+                'id': this.props.risoluzione_attiva
             }
             
             //passo il csrf al controller rails che lo vuole in POST
@@ -138,7 +142,7 @@ export default class Risoluzione extends React.Component {
                 
             }
             //caso show di una risoluzione
-            if(this.props.risoluzione_attiva !== null){ 
+            if(this.props.risoluzione_attiva){ 
                 let dati_risoluzione = await this.RestService.call_api(dominio_corrente, "risoluzioni", this.props.risoluzione_attiva, null, {}, "json"); 
                 console.log("Arrivati dati json per risoluzione");
                 if(dati_risoluzione.stato == 'ok'){
@@ -149,7 +153,8 @@ export default class Risoluzione extends React.Component {
                                                     tags: dati_risoluzione.tags,
                                                     applicazione: dati_risoluzione.applicazione
                                                     } });
-                    this.setState({action: 'show'})
+                    this.setState({action: 'show'});
+
                 }else{ //ko
                     console.log("Errore su chiamata risoluzione "+this.props.risoluzione_attiva);
                     console.log(dati_risoluzione);
@@ -166,8 +171,8 @@ export default class Risoluzione extends React.Component {
                                                 tags: [],
                                                 applicazione: null } 
                             });
+                this.setState({action: "new"});
             }
-            
         }
         catch(error)
         {
@@ -176,12 +181,47 @@ export default class Risoluzione extends React.Component {
         
     }
 
-    changeVal(event){
-        console.log("changeVal fired!: "+event);
+    changeVal(e){
+        console.log("changeVal fired!: "+e);
+        if(this.state.action == 'edit'){
+            const {name, value} = e.target;
+            if(name == 'problematica' || name == 'testo_soluzione'){
+                this.setState({valoriCorrenti: {[name]: value} });
+                // console.log("Attuali valori correnti");
+                // console.log(this.state.valoriCorrenti);
+            }
+            if(name == 'applicazione'){
+                console.log("Applicazione selected option");
+                console.log(value);
+            }
+        }
     }
 
+    abilitaModifica(e){
+        this.setState({action: 'edit'});
+        e.preventDefault();
+        console.log("abilitaModifica fired!: "+event.target);
+        let self = this;
+        let obj_applicazione = this.props.applicazioni.filter(function(value, index, array){
+            return value['label'] === self.state.valoriCorrenti.applicazione;
+        });
+        this.setState({selectedOptionAppl: obj_applicazione});
+        let obj_tags = []
+        this.state.tags.forEach(function(value, index, array){
+            self.state.valoriCorrenti.tags.split(", ").forEach(element => {
+                if(value['label'] === element){
+                    obj_tags.push(value);
+                }
+            });
+        });
+        this.setState({selectedOptionTags: obj_tags});
+    }
+
+
+
     render (selectProps) {
-        const selected_option = this.state.selectedOption;
+        const selected_app = this.state.selectedOptionAppl;
+        const selected_tags = this.state.selectedOptionTags;
         
         return (
             <Form onSubmit={this.handleSubmit} horizontal>
@@ -189,17 +229,21 @@ export default class Risoluzione extends React.Component {
                 {this.state.errori.map((value, index) => {
                     return <Alert key={index} bsStyle="danger">{value}</Alert>;
                 })}             
-               
                 <FormGroup controlId="problematica">
                     <Col componentClass={ControlLabel} sm={2} lg={2}>
                         Problematica* :
                     </Col>
                     <Col sm={10} lg={8}>
+                        {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
                         <FormControl type="text"
                             name="problematica"
                             placeholder="Segnalazione/Problema"
                             value={this.state.valoriCorrenti.problematica}
                             onChange={this.changeVal} />
+                        )}
+                        {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
+                            <span className="form-control no_border">{this.state.valoriCorrenti.problematica}</span>
+                        )}
                     </Col>
                 </FormGroup>
                 <FormGroup controlId="testo_soluzione">
@@ -207,7 +251,12 @@ export default class Risoluzione extends React.Component {
                         Info Soluzione* :
                     </Col>
                     <Col lg={8}>
-                        <FormControl componentClass="textarea" name="testo_soluzione" placeholder="Testo" value={this.state.valoriCorrenti.testo_soluzione}></FormControl>
+                        {((!this.state.valoriCorrenti.testo_soluzione && this.state.action == 'new') || (this.state.action == 'edit'))  && (
+                            <FormControl onChange={this.changeVal} componentClass="textarea" name="testo_soluzione" placeholder="Testo" value={this.state.valoriCorrenti.testo_soluzione}></FormControl>
+                        )}
+                        {this.state.valoriCorrenti.testo_soluzione && this.state.action == 'show' && (
+                            <span className="form-control no_border">{this.state.valoriCorrenti.testo_soluzione}</span>
+                        )} 
                     </Col>
                 </FormGroup>
                 <FormGroup controlId="tags">
@@ -215,16 +264,17 @@ export default class Risoluzione extends React.Component {
                         Tags :
                     </Col>
                     <Col lg={8}>
-                    {!this.state.valoriCorrenti.problematica && (
+                    {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
                         <CreatableSelect
                             name='tags'
                             isMulti
+                            value={selected_tags}
                             onChange={this.handleChangeMulti}
                             options={this.state.tags}
                         />
                     )}
-                    {this.state.valoriCorrenti.problematica && (
-                        <FormControl type="text" name="tags" value={this.state.valoriCorrenti.tags} />
+                    {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
+                        <span className="form-control no_border">{this.state.valoriCorrenti.tags}</span>
                     )}
                     </Col>
                 </FormGroup>
@@ -234,31 +284,31 @@ export default class Risoluzione extends React.Component {
                         Applicazione :
                     </Col>
                     <Col lg={8}>
-                    {!this.state.valoriCorrenti.problematica && (
+                    {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
                     <Select
                         name='applicazione'
-                        value={selected_option}
+                        value={selected_app}
                         onChange={this.handleChange}
                         options={this.props.applicazioni}
                     />
                     )}
-                    {this.state.valoriCorrenti.problematica && (
-                        <FormControl type="text" name="applicazione" value={this.state.valoriCorrenti.applicazione} />
+                    {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
+                        <span className="form-control no_border">{this.state.valoriCorrenti.applicazione}</span>
                     )}
                     </Col>
                 </FormGroup>
                 
                 <br />
                 <FormGroup>
-                    {!this.state.valoriCorrenti.problematica && (
+                    {(this.state.action == 'new' || this.state.action == 'edit') && (
                     <Col smOffset={1} sm={4} lg={1}>
                         <Button bsStyle="success" type="submit">Salva</Button>
                     </Col>
                     )}
-                    {this.state.valoriCorrenti.problematica && (
+                    {this.state.action == 'show' && (
                     <span>
                         <Col smOffset={1} sm={4} lg={1}>
-                            <Button bsStyle="primary" type="button">Modifica</Button>
+                            <Button bsStyle="primary" onClick={this.abilitaModifica} type="button">Modifica</Button>
                         </Col>
 
                         <Col sm={4} lg={1}>
