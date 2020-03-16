@@ -10,9 +10,7 @@ WikiHd::Engine.routes.draw do
     get 'tags' => 'hd#tags', :as => :tags
 
     post 'salva_risoluzione' => 'hd#salva_risoluzione', :as => :salva_risoluzione
-
-    resources :soluzioni
-    resources :risoluzioni
+    post 'cancella_risoluzione' => 'hd#cancella_risoluzione', :as => :cancella_risoluzione
 
     get '/' => 'hd#index', :as => :index_hd
 

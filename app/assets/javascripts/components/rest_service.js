@@ -15,14 +15,14 @@ export default class RestService {
     // params è un hash con chiave valore che viene convertito in parametri
     // resp format è il tipo di risposta che si vuole avere, json o xml
     // VEDERE COME ESEMPIO https://guides.rubyonrails.org/routing.html#crud-verbs-and-actions
-    call_api(base_url, element_type, id, action, params, resp_format) {
+    call_api(base_url, element_type, id, action, params, resp_format, http_method='get') {
         //Per dati in post
         // const data = {
         //     username: username,
         //     password: password
         // }
         let axiosConfig = {
-            method: 'GET',
+            method: http_method,
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -34,7 +34,10 @@ export default class RestService {
             // do a thing, possibly async, then…
             console.log("RestService call from param");
             //converto l'hashmap in una stringa del tipo chiave=valore&chiave2=valore2
-            var full_url_api = base_url+"/"+element_type;
+            var full_url_api = base_url;
+            if(element_type != null){
+                full_url_api += "/"+element_type
+            }
             if(id != null){
                 full_url_api += "/"+id
             }
@@ -55,23 +58,44 @@ export default class RestService {
 
             }
             console.log("Full url: "+full_url_api);
-            axios.get(full_url_api,axiosConfig)
-                .then(response => {
-                    if(!response.statusText == 'OK'){
-                        console.log("Response non ok");
-                        this.handleResponseError(response);
-                    }
-                    //prende la response e passa avanti il data
-                    return response.data;
-                })
-                .then((data) => {
-                    //console.log(data);
-                    resolve(data);
-                })
-                .catch(error => {
-                    reject(error);
-                    //this.handleError(error);
-            });
+            if(http_method.toLowerCase() == 'get'){
+                axios.get(full_url_api,axiosConfig)
+                    .then(response => {
+                        if(!response.statusText == 'OK'){
+                            console.log("Response non ok");
+                            this.handleResponseError(response);
+                        }
+                        //prende la response e passa avanti il data
+                        return response.data;
+                    })
+                    .then((data) => {
+                        //console.log(data);
+                        resolve(data);
+                    })
+                    .catch(error => {
+                        reject(error);
+                        //this.handleError(error);
+                });
+            }else if(http_method.toLowerCase() == 'post'){ 
+                axios.post(full_url_api,params,axiosConfig)
+                    .then(response => {
+                        if(!response.statusText == 'OK'){
+                            console.log("Response non ok");
+                            this.handleResponseError(response);
+                        }
+                        //prende la response e passa avanti il data
+                        return response.data;
+                    })
+                    .then((data) => {
+                        //console.log(data);
+                        resolve(data);
+                    })
+                    .catch(error => {
+                        reject(error);
+                        //this.handleError(error);
+                });
+            }
+            
 
           });
           return promise;

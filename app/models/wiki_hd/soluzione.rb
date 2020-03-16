@@ -11,8 +11,8 @@ module WikiHd
       # t.references :wiki_hd_tags, foreign_key: true
       # t.references :auth_hub_clienti_applicazione
   
-  
-  
+      before_destroy :rimuovi_associazioni_tags
+
       #passo array di tags e collego a tabella tags
       def set_tags(array_tags)
         unless array_tags.blank?
@@ -33,6 +33,11 @@ module WikiHd
           
           self.tags = tags_da_salvare
         end
+      end
+
+      #cancello associazione coi tags presenti. I tags restano!
+      def rimuovi_associazioni_tags
+          self.tags.delete
       end
   
   end

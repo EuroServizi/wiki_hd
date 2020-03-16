@@ -74,8 +74,29 @@ module WikiHd
         end
       end
 
-      # GET /risoluzioni  -> lista delle risoluzioni
+      # POST /cancella_risoluzione
+      def cancella_risoluzione
+        @esito = {}
+        begin
+          soluzione = Soluzione.find(cancella_risoluzione_param[:id])
+          unless soluzione.blank?
+            soluzione.destroy
+          end
+          @esito['stato'] = 'ok'
+          @esito['id_soluzione'] = soluzione.id
+        rescue => exc
+          logger.error exc.message
+          logger.error exc.backtrace.join("\n")
+          @esito['stato'] = 'ko'
+          @esito['errore'] = exc.message
+        end
+        
+        respond_to do |format|
+          format.json { render json: @esito }
+        end
+      end
 
+      # GET /risoluzioni  -> lista delle risoluzioni
       def risoluzioni
           begin
             size_per_page = risoluzioni_params[:sizePerPage].to_i
@@ -189,6 +210,10 @@ module WikiHd
       end
 
       def risoluzioni_corrente_params
+        params.permit(:id)
+      end
+
+      def cancella_risoluzione_param
         params.permit(:id)
       end
 

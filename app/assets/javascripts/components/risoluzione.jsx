@@ -1,8 +1,9 @@
 import axios from 'axios';
 import React from 'react';
-import { Button, Col, ControlLabel, Form, FormControl, FormGroup, Alert } from 'react-bootstrap';
+import { Button, Col, ControlLabel, Form, FormControl, FormGroup, Alert, Modal, ButtonToolbar } from 'react-bootstrap';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
+import { Editor } from '@tinymce/tinymce-react';
 import RestService from './rest_service';
 
 const dominio_corrente = window.location.origin+window.location.pathname;
@@ -32,6 +33,7 @@ export default class Risoluzione extends React.Component {
             },
             //valoriCorrenti: {},
             action: 'new',
+            modalCancella: false,
             errori: []
         }
         this.handleSubmit = this.handleSubmit.bind(this);
@@ -39,20 +41,27 @@ export default class Risoluzione extends React.Component {
         this.handleChangeMulti = this.handleChangeMulti.bind(this);
         this.changeVal = this.changeVal.bind(this);
         this.abilitaModifica = this.abilitaModifica.bind(this);
+        this.dettaglioRisoluzione = this.dettaglioRisoluzione.bind(this);
+        this.cancellaRisoluzione = this.cancellaRisoluzione.bind(this);
+        this.chiudiModalCancellazione = this.chiudiModalCancellazione.bind(this);
+        this.confermaCancellaRisoluzione = this.confermaCancellaRisoluzione.bind(this);
+        this.handleEditorChange = this.handleEditorChange.bind(this);
+        this.createMarkup = this.createMarkup.bind(this);
         
     }
 
-    /* Per react select con creazione di nuovi valori vedi */
-    /* https://react-select.com/creatable */
-
+    
+    //select con valore singolo per applicazioni
     handleChange = selected_app => {
         this.setState({ selectedOptionAppl: selected_app });
-        console.log("setto valore con handleChange: "+selected_app.label);
+        //console.log("setto valore con handleChange: "+selected_app.label);
     };
 
-
+    /* Per react select con creazione di nuovi valori vedi */
+    /* https://react-select.com/creatable */
+    //serve per salvare i valori della select multipla per i tags con creazione
     handleChangeMulti = (newValue: any, actionMeta: any) => {
-        console.log("setto valore con handleChangeMulti: "+newValue);
+        //console.log("setto valore con handleChangeMulti: "+newValue);
         this.setState({ selectedOptionTags: newValue });
         // console.group('Value Changed');
         // console.log(newValue);
@@ -60,6 +69,13 @@ export default class Risoluzione extends React.Component {
         // console.groupEnd();
       };
 
+    //copio il valore dell'editor nel campo di testo per poterlo poi salvare col submit
+    handleEditorChange = (content, editor) => {
+        //console.log('Content was updated:', content);
+        $("#testo_soluzione").val(content);
+    }
+
+    //funzione richiamata al submit
     handleSubmit(event) {
         event.preventDefault();
         //in event.target.nomecampo.value ho il valore da usare
@@ -181,6 +197,7 @@ export default class Risoluzione extends React.Component {
         
     }
 
+    //setto i valori correnti nel form
     changeVal(e){
         console.log("changeVal fired!: "+e);
         if(this.state.action == 'edit'){
@@ -197,10 +214,11 @@ export default class Risoluzione extends React.Component {
         }
     }
 
+    //cambio lo stato per poter modificare i campi
     abilitaModifica(e){
         this.setState({action: 'edit'});
         e.preventDefault();
-        console.log("abilitaModifica fired!: "+event.target);
+        //console.log("abilitaModifica fired!: "+event.target);
         let self = this;
         let obj_applicazione = this.props.applicazioni.filter(function(value, index, array){
             return value['label'] === self.state.valoriCorrenti.applicazione;
@@ -208,116 +226,265 @@ export default class Risoluzione extends React.Component {
         this.setState({selectedOptionAppl: obj_applicazione});
         let obj_tags = []
         this.state.tags.forEach(function(value, index, array){
-            self.state.valoriCorrenti.tags.split(", ").forEach(element => {
-                if(value['label'] === element){
-                    obj_tags.push(value);
-                }
-            });
+            if(self.state.valoriCorrenti.tags){
+                self.state.valoriCorrenti.tags.split(", ").forEach(element => {
+                    if(value['label'] === element){
+                        obj_tags.push(value);
+                    }
+                });
+            }
+            
         });
         this.setState({selectedOptionTags: obj_tags});
     }
 
+    //passo alla modalità read only dei dati
+    dettaglioRisoluzione(e){
+        this.setState({action: 'show'});
+        e.preventDefault();
+    }
 
+    //mostra la finestra modale per confermare la cancellazione
+    cancellaRisoluzione(e){
+        e.preventDefault();
+        this.setState({modalCancella: true});
+    }
+
+    //chiude la finestra modale
+    chiudiModalCancellazione(){
+        this.setState({modalCancella: false});
+    }
+
+    //al click sul conferma nella finestra modale chiama la cancellazione e riporta alla lista
+    async confermaCancellaRisoluzione(){
+        this.setState({modalCancella: false});
+        //passo il csrf al controller rails che lo vuole in POST
+        var csrf_key = $("meta[name='csrf-param']").attr('content');
+        var csrf_val = $("meta[name='csrf-token']").attr('content');
+        let postData = {};
+        postData['id'] = this.props.risoluzione_attiva
+        postData[csrf_key] = csrf_val;
+        let axiosConfig = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json', //fa vedere a rails che e' una richiesta json!
+            },
+            responseType: 'json'
+        };
+        axios.post('cancella_risoluzione',postData,axiosConfig).then(dati_cancellazione => {
+            if(dati_cancellazione.stato == 'ok'){
+                console.log("Arrivati dati json per cancellazione risoluzione con esito ok");
+                console.log(dati_cancellazione);
+                //ritorno alla lista
+                this.props.setMain(true,false,true,null);
+            }else{ //ko
+                console.log("Errore in cancellazione risoluzione");
+                console.log(dati_cancellazione);
+                this.setState({errori: ["Errore durante la cancellazione!"]});
+            }
+            this.props.setMain(true,false,true,null);
+        }).catch(err =>{
+            this.setState({errori: ["Errore durante la cancellazione!"]});
+            console.log("Errore in cancellazione risoluzione: "+err);
+            alert(err);
+        });
+        
+        // var csrf_key = $("meta[name='csrf-param']").attr('content');
+        // var csrf_val = $("meta[name='csrf-token']").attr('content');
+        // let dati_cancellazione = await this.RestService.call_api(dominio_corrente, "cancella_risoluzione", null, null, { 'id': this.props.risoluzione_attiva, csrf_key: csrf_val}, 'json', 'post'); 
+        //     console.log("Arrivati dati json per cancellazione risoluzione");
+        //     if(dati_cancellazione.stato == 'ok'){
+        //         console.log("Arrivati dati json per cancellazione risoluzione con esito ok");
+        //         console.log(dati_cancellazione);
+        //         //ritorno alla lista
+        //         this.props.setMain(true,false,true,null);
+        //     }else{ //ko
+        //         console.log("Errore in cancellazione risoluzione");
+        //         console.log(dati_cancellazione);
+        //         this.setState({errori: ["Errore durante la cancellazione!"]});
+        //     }
+    }
+
+    //Permette di togliere testo html dalla pagina e di interpretarlo senza avere xss
+    createMarkup() {
+        return {__html: this.state.valoriCorrenti.testo_soluzione};
+    }
 
     render (selectProps) {
         const selected_app = this.state.selectedOptionAppl;
         const selected_tags = this.state.selectedOptionTags;
         
         return (
-            <Form onSubmit={this.handleSubmit} horizontal>
-                
-                {this.state.errori.map((value, index) => {
-                    return <Alert key={index} bsStyle="danger">{value}</Alert>;
-                })}             
-                <FormGroup controlId="problematica">
-                    <Col componentClass={ControlLabel} sm={2} lg={2}>
-                        Problematica* :
-                    </Col>
-                    <Col sm={10} lg={8}>
+            <div>
+                <Modal show={this.state.modalCancella} onHide={this.chiudiModalCancellazione}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Cancellazione!</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <h4>Sei sicuro di cancellare?</h4>
+
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button onClick={this.chiudiModalCancellazione}>Annulla</Button>
+                        <Button bsStyle="primary" onClick={this.confermaCancellaRisoluzione}>Conferma</Button>
+                    </Modal.Footer>
+                </Modal>
+            
+                <Form onSubmit={this.handleSubmit} horizontal className="form_risoluzione">
+                    
+                    {this.state.errori.map((value, index) => {
+                        return <Alert key={index} bsStyle="danger">{value}</Alert>;
+                    })}             
+                    <FormGroup controlId="problematica">
+                        <Col componentClass={ControlLabel} sm={2} lg={2}>
+                            Problematica* :
+                        </Col>
+                        <Col sm={10} lg={8}>
+                            {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
+                            <FormControl type="text"
+                                name="problematica"
+                                placeholder="Segnalazione/Problema"
+                                value={this.state.valoriCorrenti.problematica}
+                                onChange={this.changeVal} />
+                            )}
+                            {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
+                                <span className="form-control no_border">{this.state.valoriCorrenti.problematica}</span>
+                            )}
+                        </Col>
+                    </FormGroup>
+                    <FormGroup controlId="testo_soluzione" id="testo_soluzione">
+                        <Col componentClass={ControlLabel} sm={2} lg={2}>
+                            Info Soluzione* :
+                        </Col>
+                        <Col lg={8}>
+                            {((!this.state.valoriCorrenti.testo_soluzione && this.state.action == 'new') || (this.state.action == 'edit'))  && (
+                                <div>
+                                    <FormControl componentClass="textarea" name="testo_soluzione" id="testo_soluzione" className="hidden" value={this.state.valoriCorrenti.testo_soluzione} ></FormControl>
+                                    <Editor
+                                        initialValue={this.state.valoriCorrenti.testo_soluzione}
+                                        init={{
+                                            height: 300,
+                                            menubar: false,
+                                            plugins: [
+                                                'advlist autolink lists link image charmap print preview anchor',
+                                                'searchreplace visualblocks code fullscreen',
+                                                'insertdatetime media table paste code help wordcount'
+                                            ],
+                                            toolbar:
+                                                'undo redo | formatselect | bold italic backcolor | \
+                                                alignleft aligncenter alignright alignjustify | \
+                                                bullist numlist outdent indent | removeformat | help'
+                                        }}
+                                        onEditorChange={this.handleEditorChange}
+                                    />
+                                </div>
+                            )}
+                            {this.state.valoriCorrenti.testo_soluzione && this.state.action == 'show' && (
+                                <span className="form-control no_border" dangerouslySetInnerHTML={this.createMarkup()} ></span>
+                            )} 
+                        </Col>
+                        
+                    </FormGroup>
+                    <FormGroup controlId="tags">
+                        <Col componentClass={ControlLabel} sm={2} lg={2}>
+                            Tags :
+                        </Col>
+                        <Col lg={8}>
                         {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
-                        <FormControl type="text"
-                            name="problematica"
-                            placeholder="Segnalazione/Problema"
-                            value={this.state.valoriCorrenti.problematica}
-                            onChange={this.changeVal} />
+                            <CreatableSelect
+                                name='tags'
+                                isMulti
+                                value={selected_tags}
+                                onChange={this.handleChangeMulti}
+                                options={this.state.tags}
+                            />
                         )}
                         {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
-                            <span className="form-control no_border">{this.state.valoriCorrenti.problematica}</span>
+                            <span className="form-control no_border">{this.state.valoriCorrenti.tags}</span>
                         )}
-                    </Col>
-                </FormGroup>
-                <FormGroup controlId="testo_soluzione">
-                    <Col componentClass={ControlLabel} sm={2} lg={2}>
-                        Info Soluzione* :
-                    </Col>
-                    <Col lg={8}>
-                        {((!this.state.valoriCorrenti.testo_soluzione && this.state.action == 'new') || (this.state.action == 'edit'))  && (
-                            <FormControl onChange={this.changeVal} componentClass="textarea" name="testo_soluzione" placeholder="Testo" value={this.state.valoriCorrenti.testo_soluzione}></FormControl>
-                        )}
-                        {this.state.valoriCorrenti.testo_soluzione && this.state.action == 'show' && (
-                            <span className="form-control no_border">{this.state.valoriCorrenti.testo_soluzione}</span>
-                        )} 
-                    </Col>
-                </FormGroup>
-                <FormGroup controlId="tags">
-                    <Col componentClass={ControlLabel} sm={2} lg={2}>
-                        Tags :
-                    </Col>
-                    <Col lg={8}>
-                    {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
-                        <CreatableSelect
-                            name='tags'
-                            isMulti
-                            value={selected_tags}
-                            onChange={this.handleChangeMulti}
-                            options={this.state.tags}
+                        </Col>
+                    </FormGroup>
+
+                    <FormGroup controlId="applicazione">
+                        <Col componentClass={ControlLabel} sm={2} lg={2}>
+                            Applicazione :
+                        </Col>
+                        <Col lg={8}>
+                        {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
+                        <Select
+                            name='applicazione'
+                            value={selected_app}
+                            onChange={this.handleChange}
+                            options={this.props.applicazioni}
                         />
-                    )}
-                    {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
-                        <span className="form-control no_border">{this.state.valoriCorrenti.tags}</span>
-                    )}
-                    </Col>
-                </FormGroup>
-
-                <FormGroup controlId="applicazione">
-                    <Col componentClass={ControlLabel} sm={2} lg={2}>
-                        Applicazione :
-                    </Col>
-                    <Col lg={8}>
-                    {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
-                    <Select
-                        name='applicazione'
-                        value={selected_app}
-                        onChange={this.handleChange}
-                        options={this.props.applicazioni}
-                    />
-                    )}
-                    {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
-                        <span className="form-control no_border">{this.state.valoriCorrenti.applicazione}</span>
-                    )}
-                    </Col>
-                </FormGroup>
-                
-                <br />
-                <FormGroup>
-                    {(this.state.action == 'new' || this.state.action == 'edit') && (
-                    <Col smOffset={1} sm={4} lg={1}>
-                        <Button bsStyle="success" type="submit">Salva</Button>
-                    </Col>
-                    )}
-                    {this.state.action == 'show' && (
-                    <span>
-                        <Col smOffset={1} sm={4} lg={1}>
-                            <Button bsStyle="primary" onClick={this.abilitaModifica} type="button">Modifica</Button>
+                        )}
+                        {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
+                            <span className="form-control no_border">{this.state.valoriCorrenti.applicazione}</span>
+                        )}
                         </Col>
-
-                        <Col sm={4} lg={1}>
-                            <Button bsStyle="danger" type="button">Elimina</Button>
+                    </FormGroup>
+                    
+                    <br />
+                    {/* <FormGroup>
+                        {this.state.action == 'new' && (
+                        <Col smOffset={1} sm={4} lg={2} md={2}>
+                            <Button bsStyle="success" type="submit">Salva</Button>
                         </Col>
-                    </span>
-                    )}
-                </FormGroup>
-            </Form>
+                        )}
+                        {(this.state.action == 'edit' || this.state.action == 'remove') && (
+                        <Col smOffset={1} sm={4} lg={2} md={2}>
+                            <Button type="button" onClick={this.dettaglioRisoluzione} >Annulla</Button>
+                        </Col>
+                        )}
+                        {(this.state.action == 'edit') && (
+                        <Col sm={4} lg={2} md={2}>
+                            <Button bsStyle="success" type="submit">Salva</Button>
+                        </Col>
+                        )}
+                        {this.state.action == 'show' && (
+                        <span>
+                            <Col smOffset={1} sm={4} lg={2} md={2}>
+                                <Button bsStyle="primary" onClick={this.abilitaModifica} type="button">Modifica</Button>
+                            </Col>
+
+                            <Col sm={4} lg={2} md={2}>
+                                <Button bsStyle="danger" onClick={this.cancellaRisoluzione} type="button">Elimina</Button>
+                            </Col>
+                        </span>
+                        )}
+                    </FormGroup> */}
+
+                    <ButtonToolbar>
+                    {this.state.action == 'new' && (
+                        
+                            <Button bsStyle="success" type="submit">Salva</Button>
+                        
+                        )}
+                        {(this.state.action == 'edit' || this.state.action == 'remove') && (
+                        
+                            <Button type="button" onClick={this.dettaglioRisoluzione} >Annulla</Button>
+                       
+                        )}
+                        {(this.state.action == 'edit') && (
+                       
+                            <Button bsStyle="success" type="submit">Salva</Button>
+                        
+                        )}
+                        {this.state.action == 'show' && (
+                        <span>
+                            
+                                <Button bsStyle="primary" onClick={this.abilitaModifica} type="button">Modifica</Button>
+                            
+                                <Button bsStyle="danger" onClick={this.cancellaRisoluzione} type="button">Elimina</Button>
+                            
+                        </span>
+                        )}
+                    </ButtonToolbar>
+
+
+
+                </Form>
+            </div>
         );
     }
 }

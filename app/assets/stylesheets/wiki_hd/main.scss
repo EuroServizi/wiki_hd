@@ -12,3 +12,17 @@
 .no_border{
   border: none !important;
 }
+
+.btn-toolbar{
+  margin-left: 120px;
+  margin-bottom: 20px;
+  button{
+    margin-right: 5px;
+  }
+}
+
+.form_risoluzione{
+  #testo_soluzione .form-control{
+    height: auto;
+  }
+}
