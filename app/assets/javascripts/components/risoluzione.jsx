@@ -131,7 +131,7 @@ export default class Risoluzione extends React.Component {
             var csrf_val = $("meta[name='csrf-token']").attr('content');
             postData[csrf_key] = csrf_val;
             console.log(JSON.stringify(postData));
-            axios.post('wiki_hd/salva_risoluzione',postData,axiosConfig).then(create_res => {
+            axios.post(dominio_corrente+'salva_risoluzione',postData,axiosConfig).then(create_res => {
                 console.log("Creata nuova Risoluzione:", create_res);
                 this.props.setMain(true,false,true,null);
             }).catch(err =>{
@@ -286,7 +286,7 @@ export default class Risoluzione extends React.Component {
             },
             responseType: 'json'
         };
-        axios.post('wiki_hd/cancella_risoluzione',postData,axiosConfig).then(dati_cancellazione => {
+        axios.post(dominio_corrente+'cancella_risoluzione',postData,axiosConfig).then(dati_cancellazione => {
             if(dati_cancellazione.stato == 'ok'){
                 console.log("Arrivati dati json per cancellazione risoluzione con esito ok");
                 console.log(dati_cancellazione);
