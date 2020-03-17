@@ -82,6 +82,7 @@ export default class Risoluzione extends React.Component {
         console.log("event target!");
         console.log(event.target.problematica);
         console.log(event.target.testo_soluzione);
+        console.log(event.target.tags);
         //Controllo campi obbligatori
         let array_errori = [];
         if(!event.target.problematica.value){
@@ -95,10 +96,12 @@ export default class Risoluzione extends React.Component {
             this.setState({errori: array_errori});
         }else{
             let tags = [];
-            if(event.target.tags.length > 0){
-                event.target.tags.forEach(element => {
-                    tags.push(element.value);
-                });
+            if($("input[name='tags']").length > 0){
+                $("input[name='tags']").each(function(){
+                    if(this.value != ""){
+                        tags.push(this.value);
+                    }                    
+                })
             }
             console.log(tags);
             let axiosConfig = {
@@ -138,9 +141,6 @@ export default class Risoluzione extends React.Component {
     async componentDidMount() {
         try
         {
-            console.log("Did mount Risoluzione");
-            console.log(this.props);
-
             let dati_tags = await this.RestService.call_api(dominio_corrente, "tags", null, null, {}, "json"); 
             console.log("Arrivati dati json tags");
             if(dati_tags.stato == 'ok'){
@@ -164,9 +164,13 @@ export default class Risoluzione extends React.Component {
                 if(dati_risoluzione.stato == 'ok'){
                     console.log("Arrivati dati json per risoluzione con esito ok");
                     console.log(dati_risoluzione);
+                    let array_tags_salvati = [];
+                    if(dati_risoluzione.tags != null && dati_risoluzione.tags != ""){
+                        array_tags_salvati = dati_risoluzione.tags.split(", ");
+                    }
                     this.setState({valoriCorrenti: {problematica: dati_risoluzione.problematica, 
                                                     testo_soluzione: dati_risoluzione.testo_soluzione,
-                                                    tags: dati_risoluzione.tags,
+                                                    tags: array_tags_salvati,
                                                     applicazione: dati_risoluzione.applicazione
                                                     } });
                     this.setState({action: 'show'});
@@ -226,12 +230,16 @@ export default class Risoluzione extends React.Component {
         this.setState({selectedOptionAppl: obj_applicazione});
         let obj_tags = []
         this.state.tags.forEach(function(value, index, array){
-            if(self.state.valoriCorrenti.tags){
-                self.state.valoriCorrenti.tags.split(", ").forEach(element => {
-                    if(value['label'] === element){
-                        obj_tags.push(value);
-                    }
-                });
+            if(self.state.valoriCorrenti.tags && self.state.valoriCorrenti.tags.length > 0){
+                //let array_tags_salvati = self.state.valoriCorrenti.tags.split(", ");
+                //if(array_tags_salvati.length > 0){
+                    self.state.valoriCorrenti.tags.forEach(element => {
+                        if(value['label'] === element){
+                            obj_tags.push(value);
+                        }
+                    });
+                //}
+                
             }
             
         });
@@ -400,7 +408,7 @@ export default class Risoluzione extends React.Component {
                             />
                         )}
                         {this.state.valoriCorrenti.problematica && this.state.action == 'show' && (
-                            <span className="form-control no_border">{this.state.valoriCorrenti.tags}</span>
+                            <span className="form-control no_border">{this.state.valoriCorrenti.tags.join(", ")}</span>
                         )}
                         </Col>
                     </FormGroup>

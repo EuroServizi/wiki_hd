@@ -30,14 +30,13 @@ module WikiHd
               tags_da_salvare << nuovo_tag
             end
           }
-          
           self.tags = tags_da_salvare
         end
       end
 
       #cancello associazione coi tags presenti. I tags restano!
       def rimuovi_associazioni_tags
-          self.tags.delete
+          self.tags.delete_all
       end
   
   end

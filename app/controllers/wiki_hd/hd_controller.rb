@@ -56,7 +56,11 @@ module WikiHd
           soluzione = (nuova_risoluzione_param[:id].blank? ? Soluzione.new : Soluzione.find(nuova_risoluzione_param[:id]) )
           soluzione.problematica = nuova_risoluzione_param[:problematica]
           soluzione.testo_soluzione = nuova_risoluzione_param[:testo_soluzione]
-          soluzione.set_tags(nuova_risoluzione_param[:tags])
+          if nuova_risoluzione_param[:tags].blank? && !soluzione.tags.blank?
+            soluzione.tags.delete_all
+          else
+            soluzione.set_tags(nuova_risoluzione_param[:tags])
+          end
           soluzione.auth_hub_user = @current_user
           soluzione.auth_hub_clienti_applicazione = AuthHub::ClientiApplicazione.find(nuova_risoluzione_param[:applicazione]) unless nuova_risoluzione_param[:applicazione].blank?
           soluzione.save
