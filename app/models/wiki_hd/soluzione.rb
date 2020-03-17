@@ -4,6 +4,7 @@ module WikiHd
       has_many :soluzioni_tags
       has_many :tags, through: :soluzioni_tags #crea realazione n a n con tabella di raccordo
       belongs_to :auth_hub_clienti_applicazione, class_name: 'AuthHub::ClientiApplicazione', optional: true
+      has_many :allegati
 
       # t.string :problematica
       # t.text :testo_soluzione

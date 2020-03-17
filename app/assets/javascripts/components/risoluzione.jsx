@@ -1,10 +1,12 @@
 import axios from 'axios';
 import React from 'react';
-import { Button, Col, ControlLabel, Form, FormControl, FormGroup, Alert, Modal, ButtonToolbar } from 'react-bootstrap';
+import { Button, Col, ControlLabel, Form, FormControl, FormGroup, Alert, Modal, ButtonToolbar, Jumbotron } from 'react-bootstrap';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import { Editor } from '@tinymce/tinymce-react';
 import RestService from './rest_service';
+import 'react-dropzone-uploader/dist/styles.css'
+import Dropzone from 'react-dropzone-uploader'
 
 const dominio_corrente = window.location.origin+window.location.pathname;
 export default class Risoluzione extends React.Component {
@@ -31,6 +33,8 @@ export default class Risoluzione extends React.Component {
                 tags: [],
                 applicazione: null
             },
+            id_soluzione_corrente: null,
+            allegati_soluzione: [],
             //valoriCorrenti: {},
             action: 'new',
             modalCancella: false,
@@ -42,11 +46,16 @@ export default class Risoluzione extends React.Component {
         this.changeVal = this.changeVal.bind(this);
         this.abilitaModifica = this.abilitaModifica.bind(this);
         this.dettaglioRisoluzione = this.dettaglioRisoluzione.bind(this);
+        //cancellazione
         this.cancellaRisoluzione = this.cancellaRisoluzione.bind(this);
         this.chiudiModalCancellazione = this.chiudiModalCancellazione.bind(this);
         this.confermaCancellaRisoluzione = this.confermaCancellaRisoluzione.bind(this);
+        //editor e testo
         this.handleEditorChange = this.handleEditorChange.bind(this);
         this.createMarkup = this.createMarkup.bind(this);
+        //gestione file upload
+        this.getUploadParams = this.getUploadParams.bind(this);
+        this.changeStatusUploadFile = this.changeStatusUploadFile.bind(this);
         
     }
 
@@ -79,16 +88,12 @@ export default class Risoluzione extends React.Component {
     handleSubmit(event) {
         event.preventDefault();
         //in event.target.nomecampo.value ho il valore da usare
-        console.log("event target!");
-        console.log(event.target.problematica);
-        console.log(event.target.testo_soluzione);
-        console.log(event.target.tags);
         //Controllo campi obbligatori
         let array_errori = [];
-        if(!event.target.problematica.value){
+        if(!$("#problematica").val()){
             array_errori.push("Il campo Problematica non può essere vuoto");
         }
-        if(!event.target.testo_soluzione.value){
+        if(!$("#testo_soluzione").val()){
             array_errori.push("Il campo Testo Soluzione non può essere vuoto");
         }
         if(array_errori.length > 0){
@@ -117,7 +122,8 @@ export default class Risoluzione extends React.Component {
                 'testo_soluzione': event.target.testo_soluzione.value,
                 'tags': tags,
                 'applicazione': event.target.applicazione.value,
-                'id': this.props.risoluzione_attiva
+                'id': this.props.risoluzione_attiva || this.state.id_soluzione_corrente,
+                'allegati': this.state.allegati_soluzione
             }
             
             //passo il csrf al controller rails che lo vuole in POST
@@ -125,7 +131,7 @@ export default class Risoluzione extends React.Component {
             var csrf_val = $("meta[name='csrf-token']").attr('content');
             postData[csrf_key] = csrf_val;
             console.log(JSON.stringify(postData));
-            axios.post('salva_risoluzione',postData,axiosConfig).then(create_res => {
+            axios.post('wiki_hd/salva_risoluzione',postData,axiosConfig).then(create_res => {
                 console.log("Creata nuova Risoluzione:", create_res);
                 this.props.setMain(true,false,true,null);
             }).catch(err =>{
@@ -174,6 +180,7 @@ export default class Risoluzione extends React.Component {
                                                     applicazione: dati_risoluzione.applicazione
                                                     } });
                     this.setState({action: 'show'});
+                    $("#testo_soluzione").val(dati_risoluzione.testo_soluzione);
 
                 }else{ //ko
                     console.log("Errore su chiamata risoluzione "+this.props.risoluzione_attiva);
@@ -279,7 +286,7 @@ export default class Risoluzione extends React.Component {
             },
             responseType: 'json'
         };
-        axios.post('cancella_risoluzione',postData,axiosConfig).then(dati_cancellazione => {
+        axios.post('wiki_hd/cancella_risoluzione',postData,axiosConfig).then(dati_cancellazione => {
             if(dati_cancellazione.stato == 'ok'){
                 console.log("Arrivati dati json per cancellazione risoluzione con esito ok");
                 console.log(dati_cancellazione);
@@ -318,10 +325,49 @@ export default class Risoluzione extends React.Component {
         return {__html: this.state.valoriCorrenti.testo_soluzione};
     }
 
+    getUploadParams(hash){
+        let file = hash['file'];
+        let meta = hash['meta'];
+        //return { url: dominio_corrente+"salva_allegato?id_sol="+this.props.risoluzione_attiva } 
+        let body = new FormData();
+        let csrf_key = $("meta[name='csrf-param']").attr('content');
+        let csrf_val = $("meta[name='csrf-token']").attr('content');
+        body.append('fileField', file);
+        body.append(csrf_key, csrf_val);
+        return { url: dominio_corrente+"/salva_allegato?id_sol="+this.props.risoluzione_attiva, body }
+    }
+
+    // const getUploadParams = ({ file, meta }) => {
+    //     const body = new FormData()
+    //     body.append('fileField', file)
+    //     return { url: 'https://httpbin.org/post', body }
+    //   }
+
+    changeStatusUploadFile({meta, file}, status, body){ 
+        if(status === 'done'){
+            let hash_response = JSON.parse(body[0]['xhr']['response']);
+            //oggetto del tipo { stato: "ok", esito: "Allegato Salvato", allegato: 4, soluzione: 18 }
+            this.setState({id_soluzione_corrente: hash_response['soluzione']});
+            let array_allegati_soluzione = this.state.allegati_soluzione;
+            array_allegati_soluzione.push(hash_response['allegato']);
+            //array univoco
+            array_allegati_soluzione = Array.from(new Set(array_allegati_soluzione) );
+            this.setState({allegati_soluzione: array_allegati_soluzione});
+        }
+    }
+
+
     render (selectProps) {
         const selected_app = this.state.selectedOptionAppl;
         const selected_tags = this.state.selectedOptionTags;
-        
+        const maxSize = 5242880; //5MB per upload file
+
+        // receives array of files that are done uploading when submit button is clicked
+        const pulisciFileUpload = (files, allFiles) => {
+            console.log(files.map(f => f.meta))
+            allFiles.forEach(f => f.remove())
+        }
+
         return (
             <div>
                 <Modal show={this.state.modalCancella} onHide={this.chiudiModalCancellazione}>
@@ -431,7 +477,32 @@ export default class Risoluzione extends React.Component {
                         )}
                         </Col>
                     </FormGroup>
-                    
+                    {((!this.state.valoriCorrenti.problematica && this.state.action == 'new') || (this.state.action == 'edit'))  && (
+                    <Dropzone
+                        getUploadParams={this.getUploadParams}
+                        onChangeStatus={this.changeStatusUploadFile}
+                        //onSubmit={handleSubmit}
+                        //accept="image/*,audio/*,video/*"
+                        minSize={0}
+                        maxSize={maxSize}
+                        multiple
+                    />
+                    // <Dropzone 
+                    //     onDrop={acceptedFiles => console.log(acceptedFiles)}
+                    //     minSize={0}
+                    //     maxSize={maxSize}
+                    //     multiple
+                    //     >
+                    //     {({getRootProps, getInputProps, isDragActive}) => (
+                    //         <Jumbotron>
+                    //         <div {...getRootProps()}>
+                    //             <input {...getInputProps()} />
+                    //             <p>{isDragActive ? "Drop it like it's hot!" : 'Click me or drag a file to upload!'}</p>
+                    //         </div>
+                    //         </Jumbotron>
+                    //     )}
+                    // </Dropzone>
+                    )}
                     <br />
                     {/* <FormGroup>
                         {this.state.action == 'new' && (

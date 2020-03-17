@@ -5,6 +5,7 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.uncountable %w( fish sheep )
     inflect.irregular 'soluzione', 'soluzioni'
     inflect.irregular 'soluzione_tag', 'soluzioni_tags'
+    inflect.irregular 'allegato', 'allegati'
     
     
 end

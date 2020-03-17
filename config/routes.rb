@@ -12,6 +12,9 @@ WikiHd::Engine.routes.draw do
     post 'salva_risoluzione' => 'hd#salva_risoluzione', :as => :salva_risoluzione
     post 'cancella_risoluzione' => 'hd#cancella_risoluzione', :as => :cancella_risoluzione
 
+    post 'salva_allegato' => 'hd#salva_allegato', :as => :salva_allegato
+    post 'cancella_allegato' => 'hd#cancella_allegato', :as => :cancella_allegato
+
     get '/' => 'hd#index', :as => :index_hd
 
 end
