@@ -13,14 +13,6 @@ export default class Risoluzione extends React.Component {
   
     constructor(props){
         super(props);
-        // this.state = {
-        //     'nuovaRisoluzione': {
-        //         'problematica': '',
-        //         'testo_soluzione': '',
-        //         'tags': ''
-        //         //tags: [] da fare, creare array
-        //     }
-        // }
         this.RestService = new RestService();
         this.state = {
             selectedOptionAppl: null,
@@ -90,7 +82,7 @@ export default class Risoluzione extends React.Component {
         //in event.target.nomecampo.value ho il valore da usare
         //Controllo campi obbligatori
         let array_errori = [];
-        if(!$("#problematica").val()){
+        if(!$("#testo_soluzione").val()){
             array_errori.push("Il campo Problematica non può essere vuoto");
         }
         if(!$("#testo_soluzione").val()){
@@ -118,8 +110,8 @@ export default class Risoluzione extends React.Component {
                 responseType: 'json'
             };
             let postData = {
-                'problematica': event.target.problematica.value,
-                'testo_soluzione': event.target.testo_soluzione.value,
+                'problematica': $("#problematica").val(),
+                'testo_soluzione':$("#testo_soluzione").val(),
                 'tags': tags,
                 'applicazione': event.target.applicazione.value,
                 'id': this.props.risoluzione_attiva || this.state.id_soluzione_corrente,
@@ -487,51 +479,9 @@ export default class Risoluzione extends React.Component {
                         maxSize={maxSize}
                         multiple
                     />
-                    // <Dropzone 
-                    //     onDrop={acceptedFiles => console.log(acceptedFiles)}
-                    //     minSize={0}
-                    //     maxSize={maxSize}
-                    //     multiple
-                    //     >
-                    //     {({getRootProps, getInputProps, isDragActive}) => (
-                    //         <Jumbotron>
-                    //         <div {...getRootProps()}>
-                    //             <input {...getInputProps()} />
-                    //             <p>{isDragActive ? "Drop it like it's hot!" : 'Click me or drag a file to upload!'}</p>
-                    //         </div>
-                    //         </Jumbotron>
-                    //     )}
-                    // </Dropzone>
                     )}
                     <br />
-                    {/* <FormGroup>
-                        {this.state.action == 'new' && (
-                        <Col smOffset={1} sm={4} lg={2} md={2}>
-                            <Button bsStyle="success" type="submit">Salva</Button>
-                        </Col>
-                        )}
-                        {(this.state.action == 'edit' || this.state.action == 'remove') && (
-                        <Col smOffset={1} sm={4} lg={2} md={2}>
-                            <Button type="button" onClick={this.dettaglioRisoluzione} >Annulla</Button>
-                        </Col>
-                        )}
-                        {(this.state.action == 'edit') && (
-                        <Col sm={4} lg={2} md={2}>
-                            <Button bsStyle="success" type="submit">Salva</Button>
-                        </Col>
-                        )}
-                        {this.state.action == 'show' && (
-                        <span>
-                            <Col smOffset={1} sm={4} lg={2} md={2}>
-                                <Button bsStyle="primary" onClick={this.abilitaModifica} type="button">Modifica</Button>
-                            </Col>
-
-                            <Col sm={4} lg={2} md={2}>
-                                <Button bsStyle="danger" onClick={this.cancellaRisoluzione} type="button">Elimina</Button>
-                            </Col>
-                        </span>
-                        )}
-                    </FormGroup> */}
+                   
 
                     <ButtonToolbar>
                     {this.state.action == 'new' && (
