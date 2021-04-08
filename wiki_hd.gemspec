@@ -17,6 +17,6 @@ Gem::Specification.new do |s|
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
 
   s.add_dependency "rails", "~> 5.2.0"
-  s.add_dependency "mysql2", "= 0.4.10"
+  s.add_dependency "mysql2", "= 0.5.3"
   s.add_dependency 'config' #PER USARE SETTINGS IN DEVISE.RB
 end
