@@ -13,5 +13,7 @@ gemspec
 
 # To use a debugger
 # gem 'byebug', group: [:development, :test]
-
-gem 'react-rails'
+# gem 'rails', '= 5.2.4.3'
+# gem 'config', '= 2.0.0'
+# gem 'sass-rails', '= 5.0.7'
+# gem 'react-rails'
